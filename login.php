@@ -1,10 +1,22 @@
 <?php
     session_start();
-    if(!empty($_SESSION['user_email'])){
-        header("Location: home.php");
-        exit();
+    if (isset($_SESSION['user_email'])) {
+    $role = $_SESSION['user_role'] ?? 'member';
+    switch ($role) {
+        case 'superadmin':
+            header("Location: superadmin.php");
+            break;
+        case 'admin':
+            header("Location: admin.php");
+            break;
+        default:
+            header("Location: home.php");
+            break;
     }
+    exit();
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
