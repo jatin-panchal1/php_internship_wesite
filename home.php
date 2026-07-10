@@ -14,7 +14,70 @@ $role  = $_SESSION['user_role'] ?? 'member';
 $message = '';
 $message_type = '';
 
-// --- Handle password change only ---
+// --- Handle profile picture upload ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_picture') {
+    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+        $file = $_FILES['profile_picture'];
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+        $max_size = 2 * 1024 * 1024; // 2 MB
+
+        if (!in_array($file['type'], $allowed_types)) {
+            $message = "Only JPG, PNG, and GIF images are allowed.";
+            $message_type = 'danger';
+        } elseif ($file['size'] > $max_size) {
+            $message = "File size must be under 2 MB.";
+            $message_type = 'danger';
+        } else {
+            // Ensure uploads directory exists
+            $upload_dir = __DIR__ . '/uploads/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+
+            $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $new_filename = uniqid() . '.' . $ext;
+            $upload_path = $upload_dir . $new_filename;
+
+            if (move_uploaded_file($file['tmp_name'], $upload_path)) {
+                // Delete old picture if exists
+                $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE email = ?");
+                $stmt->bind_param("s", $email);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                $old = $res->fetch_assoc();
+                if ($old && $old['profile_picture'] && file_exists($upload_dir . $old['profile_picture'])) {
+                    unlink($upload_dir . $old['profile_picture']);
+                }
+                $stmt->close();
+
+                // Update database
+                $stmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE email = ?");
+                $stmt->bind_param("ss", $new_filename, $email);
+                if ($stmt->execute()) {
+                    $message = "Profile picture updated successfully.";
+                    $message_type = 'success';
+                } else {
+                    $message = "Database update failed.";
+                    $message_type = 'danger';
+                }
+                $stmt->close();
+            } else {
+                $message = "Failed to move uploaded file.";
+                $message_type = 'danger';
+            }
+        }
+    } else {
+        $message = "Please select a file to upload.";
+        $message_type = 'danger';
+    }
+
+    $_SESSION['profile_message'] = $message;
+    $_SESSION['profile_message_type'] = $message_type;
+    header("Location: home.php");
+    exit();
+}
+
+// --- Handle password change ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_password') {
     $current     = $_POST['current_password'] ?? '';
     $new         = $_POST['new_password'] ?? '';
@@ -30,7 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $message = "New password must be at least 6 characters.";
         $message_type = 'danger';
     } else {
-        // Verify current password
         $stmt = $conn->prepare("SELECT password_hash FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -56,7 +118,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 
-    // Store message in session and redirect to avoid resubmission
     $_SESSION['profile_message'] = $message;
     $_SESSION['profile_message_type'] = $message_type;
     header("Location: home.php");
@@ -70,9 +131,9 @@ if (isset($_SESSION['profile_message'])) {
     unset($_SESSION['profile_message'], $_SESSION['profile_message_type']);
 }
 
-// Fetch current user data
+// Fetch current user data (including profile_picture)
 $user = null;
-$stmt = $conn->prepare("SELECT email, name, phone_number, age, role, created_at FROM users WHERE email = ?");
+$stmt = $conn->prepare("SELECT email, name, phone_number, age, role, created_at, profile_picture FROM users WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -84,6 +145,12 @@ if (!$user) {
     header("Location: login.php");
     exit();
 }
+
+// Profile picture path
+$profile_pic_path = '';
+if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $user['profile_picture'])) {
+    $profile_pic_path = 'uploads/' . $user['profile_picture'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -91,12 +158,9 @@ if (!$user) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* same as before – included for completeness */
         body {
             background: #f7f8fa;
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -132,16 +196,23 @@ if (!$user) {
             padding: 1.2rem 1.5rem;
         }
         .profile-avatar {
-            width: 80px;
-            height: 80px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
             background: #e9eaee;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
+            font-size: 3rem;
             color: #86868b;
-            margin-bottom: 1rem;
+            margin: 0 auto 1rem;
+            overflow: hidden;
+            object-fit: cover;
+        }
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         .btn-primary {
             background: #1d1d1f;
@@ -233,65 +304,67 @@ if (!$user) {
                 <div class="card-body">
                     <div class="text-center">
                         <div class="profile-avatar mx-auto">
-                            <i class="fas fa-user"></i>
+                            <?php if (!empty($profile_pic_path)): ?>
+                                <img src="<?php echo htmlspecialchars($profile_pic_path); ?>" alt="Profile Picture">
+                            <?php else: ?>
+                                <i class="fas fa-user"></i>
+                            <?php endif; ?>
                         </div>
+                        <!-- Upload form -->
+                        <form method="post" enctype="multipart/form-data" class="mt-2">
+                            <input type="hidden" name="action" value="upload_picture">
+                            <div class="input-group input-group-sm">
+                                <input type="file" class="form-control" name="profile_picture" accept="image/*" required>
+                                <button class="btn btn-primary btn-sm" type="submit">Upload</button>
+                            </div>
+                            <small class="text-muted">Max 2 MB, allowed: JPG, PNG, GIF</small>
+                        </form>
                     </div>
+                    <hr>
 
-                    <!-- Profile Form – now purely display (no submit button) -->
+                    <!-- Profile Information – read‑only -->
                     <form>
-                        <!-- Email (read-only) -->
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
                             <input type="email" class="form-control" id="email" value="<?php echo htmlspecialchars($user['email']); ?>" disabled>
                         </div>
-
-                        <!-- Name -->
                         <div class="mb-3">
                             <label for="name" class="form-label">Full Name</label>
-                            <input type="text" class="form-control" id="name" name="name" 
-                                   value="<?php echo htmlspecialchars($user['name']); ?>" disabled>
+                            <input type="text" class="form-control" id="name" value="<?php echo htmlspecialchars($user['name']); ?>" disabled>
                         </div>
-
-                        <!-- Phone -->
                         <div class="mb-3">
                             <label for="phone" class="form-label">Phone Number</label>
-                            <input type="text" class="form-control" id="phone" name="phone" 
-                                   value="<?php echo htmlspecialchars($user['phone_number']); ?>" disabled>
+                            <input type="text" class="form-control" id="phone" value="<?php echo htmlspecialchars($user['phone_number']); ?>" disabled>
                         </div>
-
-                        <!-- Age -->
                         <div class="mb-3">
                             <label for="age" class="form-label">Age</label>
-                            <input type="number" class="form-control" id="age" name="age" 
-                                   min="1" max="120" value="<?php echo (int) $user['age']; ?>" disabled>
+                            <input type="number" class="form-control" id="age" value="<?php echo (int) $user['age']; ?>" disabled>
                         </div>
-
-                        <!-- Role (read-only) -->
                         <div class="mb-3">
                             <label for="role" class="form-label">Role</label>
                             <input type="text" class="form-control" id="role" value="<?php echo htmlspecialchars($user['role']); ?>" disabled>
                         </div>
-
-                        <!-- Created At (read-only) -->
                         <div class="mb-3">
                             <label for="created_at" class="form-label">Member Since</label>
                             <input type="text" class="form-control" id="created_at" value="<?php echo date('d M Y, h:i A', strtotime($user['created_at'])); ?>" disabled>
                         </div>
-
-                        <!-- No update button – removed -->
                     </form>
 
-                    <!-- Optional info message -->
                     <div class="alert alert-secondary mt-3 mb-0">
-                        <i class="fas fa-info-circle me-1"></i> Profile information is read‑only. To update your details, please contact an administrator.
+                        <i class="fas fa-info-circle me-1"></i> Profile information is read‑only. To update your details, contact an administrator.
                     </div>
                 </div>
             </div>
 
-            <!-- Back to Home link -->
+            <!-- Dynamic Back to Dashboard link -->
             <div class="text-center mt-3">
-                <a href="home.php" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-arrow-left me-1"></i>Back to Home
+                <?php
+                $back_url = 'home.php';
+                if ($role === 'admin') $back_url = 'admin.php';
+                elseif ($role === 'superadmin') $back_url = 'superadmin.php';
+                ?>
+                <a href="<?php echo $back_url; ?>" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
                 </a>
             </div>
         </div>
@@ -305,7 +378,7 @@ if (!$user) {
     </div>
 </footer>
 
-<!-- ========== PASSWORD CHANGE MODAL ========== -->
+<!-- Password Change Modal -->
 <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
