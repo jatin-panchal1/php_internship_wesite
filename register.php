@@ -1,16 +1,13 @@
 <?php
-    session_start();
-    if(!empty($_SESSION['user_id'])){
-        header("Location: home.php");
-        exit();
-    }
+session_start();
+if(!empty($_SESSION['user_id'])){header("Location: home.php");}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>login</title>
+    <title>Register</title>
     <style>
         * {
             margin: 0;
@@ -84,7 +81,7 @@
             box-shadow: 0 0 0 3px rgba(120, 125, 140, 0.1);
         }
 
-        /* HTML5 validation styles – clean and simple */
+        
         input:user-invalid {
             border-color: #e3535b;
             background: #fffafa;
@@ -132,15 +129,6 @@
             text-decoration: underline;
         }
 
-       
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type="number"] {
-            -moz-appearance: textfield;
-        }
     </style>
 </head>
 <body>
@@ -148,21 +136,36 @@
         <h2>Sign in</h2>
         <p class="subtitle">Enter your details to continue</p>
 
-        <form action="#" method="post" novalidate>
+        <form action="registration_process.php" method="post" novalidate>
+            <div class="form-group">
+                <label for="name">Full name</label>
+                <input type="text" id="name" name="name" placeholder="John Doe" required minlength="2" maxlength="60" autocomplete="name">
+            </div>
+
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" placeholder="john@example.com" required autocomplete="email">
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter youe password" required >
+                <input type="password" id="password" name="password" placeholder="Enter your password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone number</label>
+                <input type="tel" id="phone" name="phone" placeholder="+91 1234567890" required pattern="[\+0-9\s\-\(\)]{7,20}" title="Enter a valid phone number" autocomplete="tel">
+            </div>
+
+            <div class="form-group">
+                <label for="age">Age</label>
+                <input type="number" id="age" name="age" placeholder="25" required min="0" max="120" title="Age between 0 and 120">
             </div>
 
             <button type="submit">Sign in</button>
         </form>
 
         <p class="footer-text">
-            No account? <a href="register.php">Sign up</a>
+            Already have a account? <a href="login.php">Sign in</a>
         </p>
     </div>
 </body>
