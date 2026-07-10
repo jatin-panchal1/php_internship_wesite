@@ -2,7 +2,6 @@
 session_start();
 require_once 'connection.php';
 
-// If already logged in, redirect to the correct dashboard based on role
 if (isset($_SESSION['user_email'])) {
     $role = $_SESSION['user_role'] ?? 'member';
     switch ($role) {
@@ -43,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_role']  = $user['role'];
             unset($_SESSION['login_error']);
 
-            // Redirect based on role
             switch ($user['role']) {
                 case 'superadmin':
                     header("Location: superadmin.php");
@@ -69,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 }
-// If not POST, redirect to login
+
 header("Location: login.php");
 exit();
 ?>

@@ -1,50 +1,55 @@
 <?php
 session_start();
-include('connection.php');
+require_once 'connection.php';
 
-$name = $_POST['name'] ?? '';
-$email = $_POST['email'] ?? '';
-$password = $_POST['password'] ?? '';
-$phone = $_POST['phone'] ?? '';
-$age = $_POST['age'] ?? 0;
+// Only process POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name  = trim($_POST['name'] ?? '');
+    $email = strtolower(trim($_POST['email'] ?? ''));
+    $password = $_POST['password'] ?? '';
+    $phone = trim($_POST['phone'] ?? '');
+    $age   = (int) ($_POST['age'] ?? 0);
 
-$hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-try {
-
-    $check_query = "SELECT email FROM users WHERE email = ?";
-    $stmt = $conn->prepare($check_query);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $stmt->store_result();
-
-    if ($stmt->num_rows > 0) {
-     
-        echo "This email address is already registered. Please login or use a different email.";
-        header("Refresh: 2; url=register.php");
-
-    } else {
-      
-        $insert_query = "INSERT INTO users (email, name, password_hash, phone_number, age) VALUES (?, ?, ?, ?, ?)";
-        $insert_stmt = $conn->prepare($insert_query);
-   
-        $insert_stmt->bind_param("ssssi", $email, $name, $hashed_password, $phone, $age);
-        
-        if ($insert_stmt->execute()) {
-          
-            $_SESSION['success_message'] = "Registration successful!";
-            header("Location: login.php");
-            exit(); 
-        } else {
-            echo "Something went wrong. Please try again.";
-        }
-        $insert_stmt->close();
+    // Basic validation
+    if (empty($name) || empty($email) || empty($password) || empty($phone) || $age < 1) {
+        $_SESSION['register_error'] = "All fields are required and age must be valid.";
+        header("Location: register.php");
+        exit();
     }
-    $stmt->close();
+
+    $check = $conn->prepare("SELECT email FROM users WHERE email = ?");
+    $check->bind_param("s", $email);
+    $check->execute();
+    $check->store_result();
+
+    if ($check->num_rows > 0) {
+        $_SESSION['register_error'] = "This email is already registered. Please login.";
+        $check->close();
+        header("Location: register.php");
+        exit();
+    }
+    $check->close();
+
     
-} catch (Exception $e) { 
-  
-    die("Database error: " . $e->getMessage());
+    $hashed = password_hash($password, PASSWORD_DEFAULT);
+    $role = 'member'; 
+
+    $insert = $conn->prepare("INSERT INTO users (email, name, password_hash, phone_number, age, role) VALUES (?, ?, ?, ?, ?, ?)");
+    $insert->bind_param("ssssis", $email, $name, $hashed, $phone, $age, $role);
+
+    if ($insert->execute()) {
+        $_SESSION['success_message'] = "Registration successful! Please login.";
+        $insert->close();
+        header("Location: login.php");
+        exit();
+    } else {
+        $_SESSION['register_error'] = "Registration failed. Please try again later.";
+        $insert->close();
+        header("Location: register.php");
+        exit();
+    }
 }
 
+header("Location: register.php");
+exit();
 ?>

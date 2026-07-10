@@ -11,7 +11,7 @@ $role = $_SESSION['user_role'] ?? '';
 if ($role !== 'admin') {
 
     if ($role === 'superadmin') {
-        header("Location: superadmin_home.php");
+        header("Location: superadmin.php");
     } else {
         header("Location: home.php"); 
     }

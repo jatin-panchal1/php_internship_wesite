@@ -1,6 +1,6 @@
 <?php
 session_start();
-if(!empty($_SESSION['user_id'])){header("Location: home.php");}
+if(!empty($_SESSION['user_email'])){header("Location: home.php");}
 ?>
 <!DOCTYPE html>
 <html lang="en">
