@@ -1,6 +1,6 @@
 <?php
     session_start();
-    if(!empty($_SESSION['user_id'])){
+    if(!empty($_SESSION['user_email'])){
         header("Location: home.php");
         exit();
     }
@@ -148,7 +148,7 @@
         <h2>Sign in</h2>
         <p class="subtitle">Enter your details to continue</p>
 
-        <form action="#" method="post" novalidate>
+        <form action="login_process.php" method="post">
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" placeholder="john@example.com" required autocomplete="email">

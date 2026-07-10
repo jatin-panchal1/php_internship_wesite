@@ -2,7 +2,6 @@
 session_start();
 include('connection.php');
 
-// It's good practice to ensure these exist before assigning them
 $name = $_POST['name'] ?? '';
 $email = $_POST['email'] ?? '';
 $password = $_POST['password'] ?? '';
@@ -12,7 +11,7 @@ $age = $_POST['age'] ?? 0;
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
 try {
-    // 1. Check if the email is already registered using SELECT
+
     $check_query = "SELECT email FROM users WHERE email = ?";
     $stmt = $conn->prepare($check_query);
     $stmt->bind_param("s", $email);
@@ -44,7 +43,7 @@ try {
     $stmt->close();
     
 } catch (Exception $e) { 
-    // Changed to standard Exception, assuming you are using mysqli and not PDO
+  
     die("Database error: " . $e->getMessage());
 }
 
