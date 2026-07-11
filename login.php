@@ -96,7 +96,6 @@
             box-shadow: 0 0 0 3px rgba(120, 125, 140, 0.1);
         }
 
-        /* HTML5 validation styles – clean and simple */
         input:user-invalid {
             border-color: #e3535b;
             background: #fffafa;

@@ -161,7 +161,7 @@ if(!empty($_SESSION['user_email'])){header("Location: home.php");}
                 <input type="number" id="age" name="age" placeholder="25" required min="0" max="120" title="Age between 0 and 120">
             </div>
 
-            <button type="submit">Sign in</button>
+            <button type="submit">Create Account</button>
         </form>
 
         <p class="footer-text">

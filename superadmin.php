@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     elseif ($action === 'edit') {
-        $original_email = $_POST['original_email'] ?? ''; // hidden field
+        $original_email = $_POST['original_email'] ?? ''; 
         $email    = strtolower(trim($_POST['email'] ?? ''));
         $name     = trim($_POST['name'] ?? '');
         $phone    = trim($_POST['phone'] ?? '');
@@ -115,8 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($email)) {
             $message = "No user specified.";
             $message_type = 'danger';
-        } else {
-            // Prevent deleting yourself
+        } else{
             if ($email === $_SESSION['user_email']) {
                 $message = "You cannot delete your own account.";
                 $message_type = 'danger';
@@ -151,11 +150,8 @@ if ($result) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Superadmin Dashboard</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome (for icons) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Optional custom CSS to match login/register theme -->
     <style>
         body {
             background: #f7f8fa;

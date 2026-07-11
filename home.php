@@ -261,7 +261,6 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
 </head>
 <body>
 
-<!-- Navigation -->
 <nav class="navbar navbar-expand-lg">
     <div class="container">
         <a class="navbar-brand" href="#">
@@ -283,7 +282,6 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
     </div>
 </nav>
 
-<!-- Main Content -->
 <div class="container main-container">
     <?php if (!empty($message)): ?>
         <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
@@ -310,7 +308,7 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
                                 <i class="fas fa-user"></i>
                             <?php endif; ?>
                         </div>
-                        <!-- Upload form -->
+
                         <form method="post" enctype="multipart/form-data" class="mt-2">
                             <input type="hidden" name="action" value="upload_picture">
                             <div class="input-group input-group-sm">
@@ -322,7 +320,6 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
                     </div>
                     <hr>
 
-                    <!-- Profile Information – read‑only -->
                     <form>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
@@ -356,7 +353,6 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
                 </div>
             </div>
 
-            <!-- Dynamic Back to Dashboard link -->
             <div class="text-center mt-3">
                 <?php
                 $back_url = 'home.php';
@@ -371,14 +367,12 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
     </div>
 </div>
 
-<!-- Footer -->
 <footer class="footer">
     <div class="container">
         &copy; <?php echo date('Y'); ?> Your Company. All rights reserved.
     </div>
 </footer>
 
-<!-- Password Change Modal -->
 <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -411,7 +405,6 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
     </div>
 </div>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
