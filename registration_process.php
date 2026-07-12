@@ -2,7 +2,6 @@
 session_start();
 require_once 'connection.php';
 
-// Only process POST requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name  = trim($_POST['name'] ?? '');
     $email = strtolower(trim($_POST['email'] ?? ''));
@@ -10,7 +9,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = trim($_POST['phone'] ?? '');
     $age   = (int) ($_POST['age'] ?? 0);
 
-    // Basic validation
     if (empty($name) || empty($email) || empty($password) || empty($phone) || $age < 1) {
         $_SESSION['register_error'] = "All fields are required and age must be valid.";
         header("Location: register.php");

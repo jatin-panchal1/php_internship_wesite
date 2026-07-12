@@ -131,6 +131,13 @@ if (isset($_SESSION['profile_message'])) {
     unset($_SESSION['profile_message'], $_SESSION['profile_message_type']);
 }
 
+// Appointment flash messages
+if (isset($_SESSION['appt_message'])) {
+    $message = $_SESSION['appt_message'];
+    $message_type = $_SESSION['appt_message_type'];
+    unset($_SESSION['appt_message'], $_SESSION['appt_message_type']);
+}
+
 // Fetch current user data (including profile_picture)
 $user = null;
 $stmt = $conn->prepare("SELECT email, name, phone_number, age, role, created_at, profile_picture FROM users WHERE email = ?");
@@ -151,6 +158,17 @@ $profile_pic_path = '';
 if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $user['profile_picture'])) {
     $profile_pic_path = 'uploads/' . $user['profile_picture'];
 }
+
+// Fetch user's appointments
+$appointments = [];
+$stmt = $conn->prepare("SELECT id, title, description, appointment_date, appointment_time, status, admin_remarks, created_at FROM appointments WHERE user_email = ? ORDER BY appointment_date DESC, appointment_time DESC");
+$stmt->bind_param("s", $email);
+$stmt->execute();
+$appt_result = $stmt->get_result();
+while ($row = $appt_result->fetch_assoc()) {
+    $appointments[] = $row;
+}
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -257,11 +275,20 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
             background: #f1f1f3;
             cursor: not-allowed;
         }
+        .badge-status {
+            font-weight: 500;
+            padding: 0.3rem 0.6rem;
+            border-radius: 30px;
+            font-size: 0.78rem;
+        }
+        .badge-pending   { background: #7f8c8d; color: #fff; }
+        .badge-approved  { background: #2980b9; color: #fff; }
+        .badge-rejected  { background: #c0392b; color: #fff; }
+        .badge-completed { background: #27ae60; color: #fff; }
     </style>
 </head>
 <body>
 
-<!-- Navigation -->
 <nav class="navbar navbar-expand-lg">
     <div class="container">
         <a class="navbar-brand" href="#">
@@ -283,7 +310,6 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
     </div>
 </nav>
 
-<!-- Main Content -->
 <div class="container main-container">
     <?php if (!empty($message)): ?>
         <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" role="alert">
@@ -310,7 +336,7 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
                                 <i class="fas fa-user"></i>
                             <?php endif; ?>
                         </div>
-                        <!-- Upload form -->
+
                         <form method="post" enctype="multipart/form-data" class="mt-2">
                             <input type="hidden" name="action" value="upload_picture">
                             <div class="input-group input-group-sm">
@@ -322,7 +348,6 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
                     </div>
                     <hr>
 
-                    <!-- Profile Information – read‑only -->
                     <form>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
@@ -356,7 +381,6 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
                 </div>
             </div>
 
-            <!-- Dynamic Back to Dashboard link -->
             <div class="text-center mt-3">
                 <?php
                 $back_url = 'home.php';
@@ -367,18 +391,105 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
                     <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
                 </a>
             </div>
+
+            <!-- Book Appointment Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="fas fa-calendar-plus me-2"></i>Book an Appointment
+                </div>
+                <div class="card-body">
+                    <form method="post" action="appointment_actions.php">
+                        <input type="hidden" name="action" value="book">
+                        <input type="hidden" name="redirect" value="home.php">
+                        <div class="mb-3">
+                            <label for="apptTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="apptTitle" name="title" placeholder="e.g. Consultation, Follow-up" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="apptDesc" class="form-label">Description <small class="text-muted">(optional)</small></label>
+                            <textarea class="form-control" id="apptDesc" name="description" rows="2" placeholder="Any additional details..."></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="apptDate" class="form-label">Date</label>
+                                <input type="date" class="form-control" id="apptDate" name="appointment_date" min="<?php echo date('Y-m-d'); ?>" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="apptTime" class="form-label">Time</label>
+                                <input type="time" class="form-control" id="apptTime" name="appointment_time" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-paper-plane me-1"></i>Submit Appointment
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- My Appointments Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="fas fa-calendar-check me-2"></i>My Appointments
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                    <th>Remarks</th>
+                                    <th style="width:80px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (count($appointments) > 0): ?>
+                                    <?php foreach ($appointments as $a): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($a['title']); ?></td>
+                                            <td><?php echo date('d M Y', strtotime($a['appointment_date'])); ?></td>
+                                            <td><?php echo date('h:i A', strtotime($a['appointment_time'])); ?></td>
+                                            <td>
+                                                <span class="badge-status badge-<?php echo $a['status']; ?>">
+                                                    <?php echo ucfirst($a['status']); ?>
+                                                </span>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($a['admin_remarks'] ?? '—'); ?></td>
+                                            <td>
+                                                <?php if ($a['status'] === 'pending'): ?>
+                                                    <form method="post" action="appointment_actions.php" style="display:inline;" onsubmit="return confirm('Cancel this appointment?');">
+                                                        <input type="hidden" name="action" value="cancel">
+                                                        <input type="hidden" name="appointment_id" value="<?php echo $a['id']; ?>">
+                                                        <input type="hidden" name="redirect" value="home.php">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr><td colspan="6" class="text-center text-muted py-3">No appointments yet.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
-<!-- Footer -->
 <footer class="footer">
     <div class="container">
         &copy; <?php echo date('Y'); ?> Your Company. All rights reserved.
     </div>
 </footer>
 
-<!-- Password Change Modal -->
 <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -411,7 +522,6 @@ if (!empty($user['profile_picture']) && file_exists(__DIR__ . '/uploads/' . $use
     </div>
 </div>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
